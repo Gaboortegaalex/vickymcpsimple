@@ -111,7 +111,8 @@ Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetr
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${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}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+
       },
       body: JSON.stringify({
         model: "gpt-4",
