@@ -115,7 +115,7 @@ Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetr
 
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: input }
