@@ -2,17 +2,12 @@
 export async function POST(req) {
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-  // Parse body (Vercel/Next13+ usa req.json())
-  let input;
+  let input = "Hola"; // Default for MCP setup
   try {
     const body = await req.json();
-    input = body.input;
+    if (body?.input) input = body.input;
   } catch {
-    return new Response(JSON.stringify({ error: "No input provided" }), { status: 400 });
-  }
-
-  if (!input) {
-    return new Response(JSON.stringify({ error: "No input provided" }), { status: 400 });
+    // Use default if body is missing or invalid
   }
 
   const systemPrompt = `
@@ -112,7 +107,6 @@ Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetr
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OPENAI_API_KEY}`,
-
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
