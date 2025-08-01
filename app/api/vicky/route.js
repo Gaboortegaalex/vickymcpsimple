@@ -1,17 +1,41 @@
-// app/api/vicky/route.js (Vercel MCP endpoint)
+import { createHmac, timingSafeEqual } from "crypto";
+
 export async function POST(req) {
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  const RETELL_SECRET = process.env.RETELL_WEBHOOK_SECRET; // key_57455b2cb601a474e328f92e25ac
 
-  let input = "Hola"; // Default for MCP setup
-  try {
-    const body = await req.json();
-    if (body?.input) input = body.input;
-  } catch {
-    // Use default if body is missing or invalid
+  const rawBody = await req.text(); // Necesitamos el cuerpo como texto sin parsear
+  const signature = req.headers.get("x-retell-signature");
+
+  // Validación de firma
+  if (!signature || !RETELL_SECRET) {
+    return new Response(JSON.stringify({ error: "Missing signature or secret" }), { status: 401 });
   }
 
-  const systemPrompt = `
-Eres Vicky, una agente de voz de Uvicuo. Tu misión es guiar con empatía y firmeza a los operadores que olvidaron subir su ticket de bomba después de cargar gasolina.
+  const hmac = createHmac("sha256", RETELL_SECRET);
+  hmac.update(rawBody);
+  const expectedSignature = hmac.digest("hex");
+
+  const signatureBuffer = Buffer.from(signature, "utf-8");
+  const expectedBuffer = Buffer.from(expectedSignature, "utf-8");
+
+  if (
+    signatureBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(signatureBuffer, expectedBuffer)
+  ) {
+    return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 401 });
+  }
+
+  // Si pasa la verificación, procesamos el mensaje
+  let input = "Hola";
+  try {
+    const body = JSON.parse(rawBody);
+    if (body?.input) input = body.input;
+  } catch {
+    // seguimos con input por defecto
+  }
+
+  const systemPrompt = `Eres Vicky, una agente de voz de Uvicuo. Tu misión es guiar con empatía y firmeza a los operadores que olvidaron subir su ticket de bomba después de cargar gasolina.
 Vicky es un agente de voz diseñado para ayudar a operadores que olvidaron subir su **ticket de bomba** tras cargar gasolina. Su misión es guiar con empatía y firmeza al operador para corregir este error, asegurar una correcta comprobación y lograr que la factura se genere automáticamente.
 
 **Vicky no escala a humanos, no interpreta ni adivina. Solo actúa con base en los flujos y SOPs definidos.**
@@ -99,7 +123,7 @@ Verifica que estés subiendo ticket de bomba para facturar con todos los datos y
    - Redirige a WhatsApp > Menú Principal > Problemas tarjeta > Hablar con experto > Contactar soporte.
 
 Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetro o documento enviado.
-`;
+;`; // pega aquí tu prompt largo como ya lo tienes
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -121,10 +145,14 @@ Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetr
 
     const data = await response.json();
     if (!data.choices || !data.choices[0]) {
-      return new Response(JSON.stringify({ error: "No response from language model" }), { status: 500 });
+      return new Response(JSON.stringify({ error: "No response from OpenAI" }), { status: 500 });
     }
-    return new Response(JSON.stringify({ result: data.choices[0].message.content }), { status: 200 });
+
+    return new Response(
+      JSON.stringify({ status: "success", message: data.choices[0].message.content }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Error communicating with OpenAI", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "OpenAI error", details: err.message }), { status: 500 });
   }
 }
