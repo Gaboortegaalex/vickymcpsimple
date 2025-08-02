@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export async function POST(req) {
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  const RETELL_SECRET = process.env.RETELL_WEBHOOK_SECRET; // key_57455b2cb601a474e328f92e25ac
+  const RETELL_SECRET = process.env.RETELL_SECRET; // key_57455b2cb601a474e328f92e25ac
 
   const rawBody = await req.text(); // Necesitamos el cuerpo como texto sin parsear
   const signature = req.headers.get("x-retell-signature");
