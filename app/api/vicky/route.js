@@ -2,17 +2,18 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export async function POST(req) {
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  const RETELL_SECRET = process.env.RETELL_SECRET; // key_57455b2cb601a474e328f92e25ac
+  const RETELL_WEBHOOK_SECRET = process.env.RETELL_WEBHOOK_SECRET; // NOT your API key!
 
-  const rawBody = await req.text(); // Necesitamos el cuerpo como texto sin parsear
+  const rawBody = await req.text();
   const signature = req.headers.get("x-retell-signature");
 
-  // Validación de firma
-  if (!signature || !RETELL_SECRET) {
+  // Validation
+  if (!signature || !RETELL_WEBHOOK_SECRET) {
     return new Response(JSON.stringify({ error: "Missing signature or secret" }), { status: 401 });
   }
 
-  const hmac = createHmac("sha256", RETELL_SECRET);
+  // Signature verification
+  const hmac = createHmac("sha256", RETELL_WEBHOOK_SECRET);
   hmac.update(rawBody);
   const expectedSignature = hmac.digest("hex");
 
@@ -26,13 +27,13 @@ export async function POST(req) {
     return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 401 });
   }
 
-  // Si pasa la verificación, procesamos el mensaje
+  // Process the message
   let input = "Hola";
   try {
     const body = JSON.parse(rawBody);
     if (body?.input) input = body.input;
   } catch {
-    // seguimos con input por defecto
+    // Use default input
   }
 
   const systemPrompt = `Eres Vicky, una agente de voz de Uvicuo. Tu misión es guiar con empatía y firmeza a los operadores que olvidaron subir su ticket de bomba después de cargar gasolina.
@@ -123,14 +124,14 @@ Verifica que estés subiendo ticket de bomba para facturar con todos los datos y
    - Redirige a WhatsApp > Menú Principal > Problemas tarjeta > Hablar con experto > Contactar soporte.
 
 Nunca digas que el sistema está fallando. Siempre es error del ticket, odómetro o documento enviado.
-;`; // pega aquí tu prompt largo como ya lo tienes
+;`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`, // Fixed template literal
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
