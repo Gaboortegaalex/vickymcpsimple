@@ -15,10 +15,10 @@ export async function POST(req) {
   // Signature verification
   const hmac = createHmac("sha256", RETELL_WEBHOOK_SECRET);
   hmac.update(rawBody);
-  const expectedSignature = hmac.digest("utf-8");
+  const expectedSignature = hmac.digest("hex");
 
-  const signatureBuffer = Buffer.from(signature, "utf-8"");
-  const expectedBuffer = Buffer.from(expectedSignature, "utf-8"");
+  const signatureBuffer = Buffer.from(signature, "hex"");
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
   if (
     signatureBuffer.length !== expectedBuffer.length ||
     !timingSafeEqual(signatureBuffer, expectedBuffer)
